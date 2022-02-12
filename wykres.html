@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>6.15. Rosnący wykres słupkowy</title>
+<style>
+#graph {
+   /* obramuj płótno */
+   border:1px solid #03F;
+}
+</style>
+<script>
+
+// zmienne płótna i kontekstu rysowania
+var canvas;
+var context;
+
+// ustawienia wykresu
+var chartMargin;
+var chartAxisSpace;
+var chartWidth;
+var chartHeight;
+
+// zmienne dotyczące słupków
+var numBars = 0;        // całkowita liczba słupków
+var barMargin = 20;     // margines pomiędzy słupkami
+var barWidth = 0;       // szerokość słupka
+var maxValue = 0;       // maksymalna wartość danych słupków
+
+// liczba etykiet osi y
+var numYLabels;
+
+// zmienne dotyczące animacji słupków
+var idxStep;
+var numSteps;
+var growSpeed;
+
+// przykładowe dane wykresu w postaci JSON
+var chartData = {'bars':[
+   {'title':'1. rok','value':'7'},
+   {'title':'2. rok','value':'12'},
+   {'title':'3. rok','value':'20'},
+   {'title':'4. rok','value':'33'},
+   {'title':'5. rok','value':'55'},
+   {'title':'6. rok','value':'93'},
+   {'title':'7. rok','value':'156'}
+]}
+
+// inicjalizuj szerokość i wysokość planszy
+function initGraph() {
+
+   // pozyskaj odwołanie do płótna i kontekstu rysowania
+   canvas = document.getElementById('graph');
+   context = canvas.getContext('2d');
+
+   initSettings();      // inicjalizuj ustawienia wykresu
+   drawAxis();          // narysuj osie wykresu i ich etykiety
+   growBars();          // animuj słupki wykresu
+}
+
+function initSettings() {
+
+   // ustawienia wykresu
+   chartMargin = 20;    // margines wokół całego płótna
+   chartAxisSpace = 50; // obszar na osie x i y
+   // ustawienia obszaru rysowania wykresu
+   chartHeight = canvas.height-chartAxisSpace-2*chartMargin;
+   chartWidth = canvas.width-chartAxisSpace-2*chartMargin;
+
+   // ustaw liczbę etykiet używaną wobec osi y
+   numYLabels = 8;
+
+   // ustaw liczbę słupków na podstawie danych chartData
+   numBars = chartData.bars.length;
+
+   // znajdź maksymalną wartość w danych i przeskaluj wykres
+   for (var i=0; i < numBars; i++) {
+      if (chartData.bars[i].value > maxValue) {
+         maxValue = parseInt(chartData.bars[i].value);
+      }
+   }
+
+   // określ szerokość każdego słupka
+   barWidth = (chartWidth / numBars)-barMargin;
+
+   // inicjalizuj zmienne dotyczące animacji
+   idxStep = 0;
+   numSteps = 100;
+   growSpeed = 6;
+}
+
+function drawAxis() {
+   // ustaw grubość linii odpowiadającą szerokości osi
+   context.lineWidth = 2;
+
+   // narysuj oś y — od lewej dolnej strony do lewej górnej
+   context.moveTo(chartMargin+chartAxisSpace,chartHeight+chartMargin);
+   context.lineTo(chartMargin+chartAxisSpace, chartMargin);
+   context.stroke();
+
+   // narysuj oś x — od lewej dolnej strony do prawej dolnej
+   context.moveTo(chartMargin+chartAxisSpace, chartMargin+chartHeight);
+   context.lineTo(chartMargin+chartAxisSpace+chartWidth, chartMargin+chartHeight);
+   context.stroke();
+
+   // ustaw grubość linii z powrotem na 1 piksel
+   context.lineWidth = 1;
+
+   // dodaj etykiety danych na osi y
+   var markerAmount = parseInt(maxValue / numYLabels);
+   context.textAlign = 'right';
+   context.fillStyle = '#000';
+   // dodaj w pętli etykiety na osi y
+   for (var i=0; i <= numYLabels; i++) {
+      // ustal etykietę i punkty x i y
+      markerLabel = i*markerAmount;
+      markerXPos = chartMargin + chartAxisSpace - 5;
+      markerYPos = chartMargin + (chartHeight - ((i*markerAmount*chartHeight)/maxValue));
+
+      // dodaj etykiety tekstowe na ustalonych pozycjach
+      context.fillText(markerLabel, markerXPos, markerYPos, chartAxisSpace);
+   }
+
+   // dodaj etykiety każdego słupka w oparciu o dane wykresu
+   context.textAlign = 'center';
+   // dodaj w pętli tytuł każdego słupka
+   for (var i=0; i<numBars; i++) {
+      // określ pozycje x i y etykiet
+      markerXPos = chartMargin+chartAxisSpace + barMargin + (i * (barWidth+barMargin)) + (.5*barWidth);
+      markerYPos = chartMargin+chartHeight + 10;
+      // dodaj tekst pod słupkiem
+      context.fillText(chartData.bars[i].title, markerXPos, markerYPos, barWidth);
+   }
+
+   // dodaj tytuł osi y
+   // zapamiętaj obecny kontekst
+   context.save();
+   // przesuń punkt (0,0) do punktu tytułu osi y
+   context.translate(chartMargin+10,chartHeight/2);
+   // obróć bieżący kontekst rysowania w kierunku przeciwnym do ruchu wskazówek zegara o 90 stopni
+   context.rotate(Math.PI*-90 / 180);
+   // dodaj tekst tytułu
+   context.fillText('Sprzedaż (w tys.)',0,0);
+   // przywróć orientację kontekstu rysowania
+   context.restore();
+
+   // dodaj tytuł osi x
+   context.fillText('Rok sprzedaży',chartMargin+chartAxisSpace+(chartWidth/2),chartMargin+chartHeight+40);
+}
+
+// funkcja animująca wzrost słupków w kierunku pionowym
+// wywoływana co jakiś czas w ustalonej liczbie kroków
+function growBars() {
+
+   // deklaruj x, y i h słupka
+   // szerokość słupka została określona wcześniej
+   var barStartX = 0;
+   var barStartY = 0;
+   var barHeight = 0;
+
+   // wartość słupka ze zbioru danych
+   var barValue = 0;
+
+   // narysuj w pętli każdy słupek w zależności od kroku
+   for (var i=0; i < numBars; i++) {
+
+      // uzyskaj wartość słupka
+      barValue = parseInt(chartData.bars[i].value);
+
+      // oblicz wysokość słupka i punkty początkowe x i y
+      barHeight = (barValue * chartHeight / maxValue) / numSteps * idxStep;
+      barStartX = chartMargin + chartAxisSpace + (i * (barWidth + barMargin)) + barMargin;
+      barStartY = chartMargin + (chartHeight-barHeight);
+
+      // wywołaj funkcję pomocniczą rysującą słupek
+      drawBar(barStartX, barStartY, barWidth, barHeight);
+   }
+
+   // powiększ słupki, jeśli jeszcze nie przestały rosnąć
+   if (idxStep<numSteps) {
+      idxStep++;
+      setTimeout('growBars()',growSpeed);
+   }
+}
+
+// funkcja pomocnicza rysująca słupek w oparciu o przekazane jej wymiary
+// można przekazać jej kontekst i inne parametry w celu dostosowania
+function drawBar(barX, barY, barW, barH) {
+   // utwórz prostokąt z wypełnieniem
+   context.fillStyle = '#00c';
+   context.fillRect(barX, barY, barW, barH);
+
+   // dodaj cień do słupka
+   context.shadowOffsetX = 3;
+   context.shadowOffsetY = -3;
+   context.shadowBlur = 3;
+   context.shadowColor = 'rgba(200, 200, 200, .3)';
+
+   // dodaj obramowanie do słupka
+   context.strokeStyle = '#000';
+   context.lineWidth = 1;
+   context.strokeRect(barX, barY, barW, barH);
+}
+
+// po załadowaniu strony inicjalizuj wykres słupkowy
+window.addEventListener('load',initGraph,false);
+
+</script>
+</head>
+<body>
+   <h1>Rosnący wykres słupkowy</h1>
+   <canvas id="graph" width="600" height="400">
+      Ta przeglądarka nie obsługuje elementu canvas.
+   </canvas>
+</body>
+</html>

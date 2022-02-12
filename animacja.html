@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dokument bez tytułu</title>
+<style>
+	canvas {
+		border: 1px solid black;
+	}
+	
+	</style>
+</head>
+
+<body>
+<h1>Animacja ruchu koła zębatego</h1>
+<canvas id="canvas" width="800" height="100">
+	
+</canvas>
+<script>
+	var canvas;
+	var context;
+	
+	var gear = new Image();
+	var xpos;
+	//zmienne animacji
+	
+	var stepCounter;
+	var stepDegrees;
+	var stepDistance;
+	var stepSpeed;
+	var stepsFullRevolution;
+	
+	function init() {
+		canvas=document.getElementById("canvas");
+		context=canvas.getContext("2d");
+		
+		stepCounter=0;
+		stepDegrees=2;
+		stepDistance=2;
+		stepSpeed=5;
+		stepsFullRevolution=parseInt(360/stepDegrees);
+		gear.addEventListener("load",initGear,false);
+		gear.src="gear.png";
+		
+	}
+	
+	function initGear() {
+		
+		xpos=-(gear.width/2);
+		
+		moveGear();
+	}
+	
+	function moveGear()
+	{
+		context.clearRect(0,0,canvas.width,canvas.height);
+		
+		context.save();
+		
+		xpos+=stepDistance;
+		
+		context.translate(xpos,canvas.height-(gear.width/2));
+		
+		context.rotate(Math.PI*stepDegrees*stepCounter/180);
+		
+		context.drawImage(gear,-(gear.width/2),-(gear.height/2),gear.width,gear.height);
+		context.restore();
+		
+		if((xpos-(gear.width/2))<canvas.width) {
+			stepCounter++
+			if(stepCounter>=(stepsFullRevolution-1)){
+				stepCounter=0
+			}
+			setTimeout("moveGear()",stepSpeed);
+		}
+		
+	}
+	
+	window.addEventListener("load",init,false);
+	</script>
+</body>
+</html>
